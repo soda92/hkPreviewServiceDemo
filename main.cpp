@@ -28,7 +28,7 @@ void session(socket_ptr sock)
             char data[max_length];
 
             boost::system::error_code error;
-            size_t length = sock->read_some(boost::asio::buffer(data), error);
+            sock->read_some(boost::asio::buffer(data), error);
             if (error == boost::asio::error::eof)
                 continue; // Connection closed cleanly by peer.
             else if (error)
@@ -37,12 +37,39 @@ void session(socket_ptr sock)
             std::string str{data};
             vector<string> result;
             boost::split(result, str, boost::is_any_of(" "));
-            long userID = HK::login(result[0].c_str());
-            if(userID >=0 ){
-                HK::preview(static_cast<long long>(std::stoi(result[1])), userID);
+            long result_ = 0;
+            if(result[0] == "osd"){
+                result_ = HK::set_osd(std::stol(result[1]),
+                        result[2].c_str(), result[3].c_str(),
+                        result[4].c_str(), result[5].c_str(),
+                        result[6].c_str(), result[7].c_str(),
+                        static_cast<bool>(std::stoi(result[8])),
+                        static_cast<bool>(std::stoi(result[9])));
+            }
+            else if(result[0] == "sync_time"){
+                result_ = HK::sync_time(std::stol(result[1]));
+            }
+            else if(result[0] == "time_manual"){
+                result_ = HK::set_time(
+                            std::stol(result[1]),
+                        std::stol(result[2]),
+                        std::stol(result[3]),
+                        std::stol(result[4]),
+                        std::stol(result[5]),
+                        std::stol(result[6]),
+                        std::stol(result[7]));
+            }
+            else{
+                long userID = HK::login(result[0].c_str());
+                if(userID >=0 ){
+                    HK::preview(static_cast<long long>(std::stoi(result[1])), userID);
+                }
+                result_ = userID;
             }
 
-            boost::asio::write(*sock, boost::asio::buffer(data, length));
+            std::string str_result = std::to_string(result_);
+//            boost::asio::write(*sock, boost::asio::buffer(data, length));
+            boost::asio::write(*sock, boost::asio::buffer(str_result));
         }
     }
     catch (std::exception& e)
